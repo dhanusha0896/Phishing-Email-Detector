@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Email Detector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .risk-high { background-color: rgb(254, 226, 226); }
+        .risk-medium { background-color: rgb(254, 249, 195); }
+        .risk-low { background-color: rgb(236, 253, 245); }
+        .risk-none { background-color: rgb(249, 250, 251); }
+        
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #3b82f6;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #3b82f6;
+        }
+        
+        .link-preview {
+            max-height: 0;
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        .link-preview.open {
+            max-height: 500px;
+            transition: max-height 0.5s ease-in;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Phishing Email Detector</h1>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                Analyze email content for potential phishing attempts by checking for common red flags and suspicious patterns
+            </p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Input Area -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Email Analyzer</h2>
+                
+                <div class="mb-6">
+                    <label for="sender" class="block text-sm font-medium text-gray-700 mb-1">Sender Email</label>
+                    <input type="text" id="sender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="sender@example.com">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="subject" class="block text-sm font-medium text-gray-700 mb-1">Email Subject</label>
+                    <input type="text" id="subject" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Urgent: Account Verification Required">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="content" class="block text-sm font-medium text-gray-700 mb-1">Email Content</label>
+                    <textarea id="content" rows="10" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Paste the full email content here..."></textarea>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <button id="analyzeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+                            Analyze Email
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <span class="text-sm font-medium text-gray-700 mr-2">Advanced Mode</span>
+                        <div class="relative inline-block w-12 mr-2 align-middle select-none">
+                            <input type="checkbox" id="advancedToggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="advancedToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="advancedOptions" class="mt-6 hidden">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3">Advanced Options</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="checkDomains" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                            <label for="checkDomains" class="ml-2 text-sm text-gray-700">Check domain spoofing</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="checkUrgency" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                            <label for="checkUrgency" class="ml-2 text-sm text-gray-700">Detect urgency indicators</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="checkLinks" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                            <label for="checkLinks" class="ml-2 text-sm text-gray-700">Analyze link destinations</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="checkGrammar" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                            <label for="checkGrammar" class="ml-2 text-sm text-gray-700">Find grammatical errors</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Area -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-md p-6 sticky top-8">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Analysis Results</h2>
+                    
+                    <div id="resultsPlaceholder" class="text-center py-16">
+                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/bb430a21-7c14-4ec3-b6d7-8a46382200ee.png" alt="Magnifying glass over an envelope showing digital security shield" class="mx-auto mb-4 rounded-lg" />
+                        <p class="text-gray-500">Submit an email to analyze for phishing indicators.</p>
+                    </div>
+                    
+                    <div id="resultsContent" class="hidden">
+                        <div id="riskScore" class="p-4 rounded-lg mb-6 text-center">
+                            <h3 class="text-lg font-semibold mb-2">Risk Assessment</h3>
+                            <div class="text-4xl font-bold mb-2">-</div>
+                            <div class="text-sm">PHISHING RISK SCORE</div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="border-b border-gray-200 pb-4">
+                                <h4 class="font-medium text-gray-800 mb-2">Identified Red Flags</h4>
+                                <ul id="redFlags" class="list-disc pl-5 space-y-1">
+                                    <!-- Filled by JavaScript -->
+                                </ul>
+                            </div>
+                            
+                            <div class="border-b border-gray-200 pb-4">
+                                <h4 class="font-medium text-gray-800 mb-2">Technical Analysis</h4>
+                                <div id="technicalAnalysis" class="space-y-3">
+                                    <!-- Filled by JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <div class="pt-2">
+                                <h4 class="font-medium text-gray-800 mb-2">Recommendation</h4>
+                                <p id="recommendation" class="text-sm"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-12 bg-white rounded-xl shadow-md p-6 hidden" id="linkDetails">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Link Analysis Details</h3>
+            <div id="linkAnalysisResults">
+                <!-- Generated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle advanced options
+            const advancedToggle = document.getElementById('advancedToggle');
+            const advancedOptions = document.getElementById('advancedOptions');
+            
+            advancedToggle.addEventListener('change', function() {
+                advancedOptions.classList.toggle('hidden', !this.checked);
+            });
+            
+            // Analyze button click handler
+            document.getElementById('analyzeBtn').addEventListener('click', analyzeEmail);
+            
+            function analyzeEmail() {
+                const sender = document.getElementById('sender').value.trim();
+                const subject = document.getElementById('subject').value.trim();
+                const content = document.getElementById('content').value.trim();
+                
+                if (!content) {
+                    alert('Please enter some email content to analyze.');
+                    return;
+                }
+                
+                // Show loading state
+                const btn = document.getElementById('analyzeBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Analyzing...</span>';
+                
+                // Simulate processing delay (would be removed in production)
+                setTimeout(() => {
+                    const results = performAnalysis(sender, subject, content);
+                    displayResults(results);
+                    btn.disabled = false;
+                    btn.textContent = 'Analyze Email';
+                }, 800);
+            }
+            
+            function performAnalysis(sender, subject, content) {
+                const results = {
+                    riskScore: 0,
+                    redFlags: [],
+                    technicalFindings: [],
+                    recommendation: '',
+                    links: []
+                };
+                
+                // Check for common red flags
+                if (subject.toLowerCase().includes('urgent') || subject.toLowerCase().includes('immediate action')) {
+                    results.redFlags.push('Subject contains urgency language (common in phishing attempts)');
+                    results.riskScore += 20;
+                }
+                
+                if (/verify|account|suspended/i.test(subject)) {
+                    results.redFlags.push('Subject suggests account problems (common phishing tactic)');
+                    results.riskScore += 15;
+                }
+                
+                // Check sender domain
+                if (sender) {
+                    const domain = sender.split('@')[1];
+                    const displayNameMatch = content.match(/From:.*<(.*@.*)>/i);
+                    const displayNameEmail = displayNameMatch ? displayNameMatch[1] : null;
+                    
+                    if (domain) {
+                        // Check for domain spoofing
+                        if (displayNameEmail && !displayNameEmail.endsWith(domain)) {
+                            results.redFlags.push(`Sender display name email (${displayNameEmail}) doesn't match actual sender domain (${domain})`);
+                            results.riskScore += 30;
+                        }
+                        
+                        // Check for suspicious domains
+                        if (domain.includes('-') || domain.split('.').some(part => part.length > 15)) {
+                            results.technicalFindings.push(`Unusual domain structure: ${domain}`);
+                            results.riskScore += 10;
+                        }
+                    }
+                }
+                
+                // Extract and check links
+                const linkRegex = /https?:\/\/[^\s]+/gi;
+                const links = content.match(linkRegex) || [];
+                let linkCount = 0;
+                
+                links.forEach(link => {
+                    try {
+                        const url = new URL(link);
+                        const domain = url.hostname.replace('www.', '');
+                        let linkRisk = 0;
+                        let linkNotes = [];
+                        
+                        if (url.hostname.includes('http:') || !url.hostname.startsWith('https')) {
+                            linkRisk += 20;
+                            linkNotes.push('Link uses HTTP instead of HTTPS (insecure)');
+                        }
+                        
+                        if (domain.includes('-') || domain.split('.').some(part => part.length > 15)) {
+                            linkRisk += 15;
+                            linkNotes.push('Unusual domain structure');
+                        }
+                        
+                        if (/(login|secure|account|verify|update)/i.test(url.pathname)) {
+                            linkRisk += 10;
+                            linkNotes.push('Link goes to a login/account page - verify legitimacy');
+                        }
+                        
+                        if (/(bit\.ly|tinyurl|goo\.gl)/i.test(domain)) {
+                            linkRisk += 25;
+                            linkNotes.push('Link uses URL shortening service (obfuscates destination)');
+                        }
+                        
+                        if (linkRisk > 0) {
+                            results.links.push({
+                                url: link,
+                                riskScore: linkRisk,
+                                notes: linkNotes
+                            });
+                            results.riskScore += linkRisk * 0.5; // Weight links less than direct red flags
+                            linkCount++;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing URL:', link);
+                    }
+                });
+                
+                if (linkCount > 0) {
+                    results.technicalFindings.push(`Found ${linkCount} suspicious link${linkCount > 1 ? 's' : ''} in email`);
+                }
+                
+                // Check content patterns
+                if (/(click here|log in now|verify your account|update your information)/i.test(content)) {
+                    results.redFlags.push('Email contains urgent call-to-action phrases');
+                    results.riskScore += 15;
+                }
+                
+                if (/dear (customer|user|valued member)/i.test(content)) {
+                    results.redFlags.push('Generic greeting instead of personalized');
+                    results.riskScore += 5;
+                }
+                
+                // Set recommendation based on risk score
+                results.riskScore = Math.min(100, Math.max(0, results.riskScore));
+                
+                if (results.riskScore >= 70) {
+                    results.recommendation = 'HIGH LIKELIHOOD OF PHISHING. Do not interact with links or attachments. Verify with sender through known-good channels.';
+                } else if (results.riskScore >= 40) {
+                    results.recommendation = 'SUSPICIOUS POTENTIAL PHISHING. Exercise caution and verify before clicking links or providing information.';
+                } else if (results.riskScore >= 20) {
+                    results.recommendation = 'Some suspicious indicators found. Review carefully before taking any requested actions.';
+                } else if (results.redFlags.length > 0 || results.technicalFindings.length > 0) {
+                    results.recommendation = 'Some minor warnings detected. Proceed with normal caution.';
+                } else {
+                    results.recommendation = 'No obvious phishing indicators detected. Still exercise normal email safety practices.';
+                }
+                
+                return results;
+            }
+            
+            function displayResults(results) {
+                // Show results container
+                document.getElementById('resultsPlaceholder').classList.add('hidden');
+                document.getElementById('resultsContent').classList.remove('hidden');
+                
+                // Set risk score and color
+                const riskElement = document.getElementById('riskScore');
+                riskElement.querySelector('div').textContent = results.riskScore;
+                
+                // Set risk level styling
+                if (results.riskScore >= 70) {
+                    riskElement.className = 'risk-high p-4 rounded-lg mb-6 text-center';
+                } else if (results.riskScore >= 40) {
+                    riskElement.className = 'risk-medium p-4 rounded-lg mb-6 text-center';
+                } else if (results.riskScore >= 20) {
+                    riskElement.className = 'risk-low p-4 rounded-lg mb-6 text-center';
+                } else {
+                    riskElement.className = 'risk-none p-4 rounded-lg mb-6 text-center';
+                }
+                
+                // Populate red flags
+                const redFlagsList = document.getElementById('redFlags');
+                redFlagsList.innerHTML = '';
+                if (results.redFlags.length > 0) {
+                    results.redFlags.forEach(flag => {
+                        const li = document.createElement('li');
+                        li.textContent = flag;
+                        li.className = 'text-sm';
+                        redFlagsList.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'No obvious red flags detected';
+                    li.className = 'text-sm text-gray-500';
+                    redFlagsList.appendChild(li);
+                }
+                
+                // Populate technical findings
+                const techList = document.getElementById('technicalAnalysis');
+                techList.innerHTML = '';
+                if (results.technicalFindings.length > 0) {
+                    results.technicalFindings.forEach(finding => {
+                        const div = document.createElement('div');
+                        div.className = 'text-sm';
+                        div.textContent = finding;
+                        techList.appendChild(div);
+                    });
+                } else {
+                    const div = document.createElement('div');
+                    div.textContent = 'No suspicious technical indicators found';
+                    div.className = 'text-sm text-gray-500';
+                    techList.appendChild(div);
+                }
+                
+                // Set recommendation
+                document.getElementById('recommendation').textContent = results.recommendation;
+                
+                // Show link details if any
+                const linkDetails = document.getElementById('linkDetails');
+                if (results.links.length > 0) {
+                    const linkResults = document.getElementById('linkAnalysisResults');
+                    linkResults.innerHTML = '';
+                    
+                    results.links.forEach((link, index) => {
+                        const linkDiv = document.createElement('div');
+                        linkDiv.className = 'mb-4 p-4 border border-gray-200 rounded-lg';
+                        
+                        const linkHeader = document.createElement('div');
+                        linkHeader.className = 'flex justify-between items-center mb-2 cursor-pointer link-toggle';
+                        
+                        const linkText = document.createElement('span');
+                        linkText.className = 'font-medium text-blue-600 break-all';
+                        linkText.textContent = link.url;
+                        
+                        const toggleIcon = document.createElement('span');
+                        toggleIcon.className = 'text-gray-500 text-sm';
+                        toggleIcon.textContent = '▼';
+                        
+                        linkHeader.appendChild(linkText);
+                        linkHeader.appendChild(toggleIcon);
+                        
+                        const previewDiv = document.createElement('div');
+                        previewDiv.className = 'link-preview bg-gray-50 p-3 rounded mt-2';
+                        
+                        const riskDiv = document.createElement('div');
+                        riskDiv.className = 'text-sm mb-2';
+                        riskDiv.innerHTML = `<span class="font-medium">Risk Score:</span> ${link.riskScore}/100`;
+                        
+                        const notesList = document.createElement('ul');
+                        notesList.className = 'list-disc pl-5 space-y-1';
+                        link.notes.forEach(note => {
+                            const li = document.createElement('li');
+                            li.className = 'text-sm';
+                            li.textContent = note;
+                            notesList.appendChild(li);
+                        });
+                        
+                        previewDiv.appendChild(riskDiv);
+                        previewDiv.appendChild(notesList);
+                        
+                        linkDiv.appendChild(linkHeader);
+                        linkDiv.appendChild(previewDiv);
+                        linkResults.appendChild(linkDiv);
+                        
+                        // Toggle click handler
+                        linkHeader.addEventListener('click', function() {
+                            previewDiv.classList.toggle('open');
+                            toggleIcon.textContent = previewDiv.classList.contains('open') ? '▲' : '▼';
+                        });
+                    });
+                    
+                    linkDetails.classList.remove('hidden');
+                } else {
+                    linkDetails.classList.add('hidden');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
